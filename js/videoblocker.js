@@ -1,57 +1,10 @@
 var containerList = [{
-    container: '.lohp-large-shelf-container',
-    channelname: '.content-uploader > a',
-    videotitle: 'a.lohp-video-link'
+    container: 'ytd-compact-video-renderer',
+    channelname: '#byline'
   },
   {
-    container: '.lohp-medium-shelf',
-    channelname: '.content-uploader > a',
-    videotitle: 'a.lohp-video-link'
-  },
-  {
-    container: '.yt-shelf-grid-item',
-    channelname: '.yt-lockup-byline .g-hovercard',
-    videotitle: '.yt-lockup-title > a'
-  },
-  {
-    container: '#results .item-section > li .yt-lockup-video',
-    channelname: '.yt-lockup-byline > a',
-    videotitle: '.yt-lockup-title > a'
-  },
-  {
-    container: '#results .item-section > li .yt-lockup-channel',
-    channelname: '.yt-lockup-title > a',
-    videotitle: '.yt-lockup-title > a'
-  },
-  {
-    container: '.expanded-shelf .expanded-shelf-content-item-wrapper',
-    channelname: '.yt-lockup-byline .g-hovercard',
-    videotitle: '.yt-lockup-title > a'
-  },
-  {
-    container: '.video-list-item',
-    channelname: 'a .attribution .g-hovercard',
-    videotitle: 'a .title'
-  },
-  {
-    container: '.playlist-videos-list > li',
-    channelname: 'a .playlist-video-description > .video-uploader-byline > span',
-    videotitle: 'a .playlist-video-description > h4'
-  },
-  {
-    container: '.pl-video-table .pl-video',
-    channelname: '.pl-video-owner > .g-hovercard',
-    videotitle: '.pl-video-title > .pl-video-title-link'
-  },
-  {
-    container: '.branded-page-related-channels-list > .branded-page-related-channels-item',
-    channelname: '.yt-lockup-title > a',
-    videotitle: '.yt-lockup-title > a'
-  },
-  {
-    container: '.ytp-endscreen-content .ytp-videowall-still',
-    channelname: '.ytp-videowall-still-info-author',
-    videotitle: '.ytp-videowall-still-info-title'
+    container: 'ytd-grid-video-renderer',
+    channelname: '#byline a'
   }
 ];
 document.addEventListener('DOMContentLoaded', function(event) {
@@ -114,92 +67,39 @@ document.addEventListener('DOMContentLoaded', function(event) {
       }, false);
     }
   });
-  hideVideos();
-  var mutationTarget = document.getElementById("page");
-  var mutationObserver = new MutationObserver(function(mutations) {
-    hideVideos();
-  });
-  var mutationConfig = {
-    "childList": true,
-    "subtree": true
-  };
-  mutationObserver.observe(mutationTarget, mutationConfig);
+  containerList = containerList.map(container => Object.assign({containers: 0}, container))
+
+
+  window.onload = () => setInterval(hideVideos, 1000)
 });
 
 function hideVideos() {
   var pageChannelName = undefined;
-  if (document.querySelector('.branded-page-header-title-link') !== null)
-    pageChannelName = document.querySelector('.branded-page-header-title-link').textContent.trim();
-  else if (document.querySelector('#watch-header .yt-user-info .g-hovercard') !== null)
-    pageChannelName = document.querySelector('#watch-header .yt-user-info .g-hovercard').textContent.trim();
-  var pageVideoTitle = undefined;
-  if (document.querySelector('#watch-header .watch-title') !== null)
-    pageVideoTitle = document.querySelector('#watch-header .watch-title').textContent.trim();
+  if (document.querySelector('#channel-title') !== null)
+    pageChannelName = document.querySelector('#channel-title').textContent.trim();
+  else if (document.querySelector('#owner-name a') !== null)
+    pageChannelName = document.querySelector('#owner-name a').textContent.trim();
   getItems(function(storage) {
     var items = storage;
     loop1: for (var i = 0; i < containerList.length; i++) {
       var containers = document.body.querySelectorAll(containerList[i].container);
+      if (containerList[i].containers === containers.length)
+        continue;
+      containerList[i].containers = containers.length;
       loop2: for (var j = 0; j < containers.length; j++) {
-        var videotitle = (typeof containerList[i].videotitle !== 'undefined' && containers[j].querySelector(containerList[i].videotitle) !== null) ? containers[j].querySelector(containerList[i].videotitle).textContent.trim() : '',
-          channelname = (typeof containerList[i].channelname !== 'undefined' && containers[j].querySelector(containerList[i].channelname) !== null) ? containers[j].querySelector(containerList[i].channelname).textContent.trim() : '',
+        var channelname = containers[j].querySelector(containerList[i].channelname).textContent,
           block = false,
           blockPage = false;
-        if (containerList[i].container === '.ytp-endscreen-content .ytp-videowall-still' && channelname.indexOf('\u2022') > -1)
-          channelname = channelname.substr(0, channelname.indexOf('\u2022')).trim();
         loop3: for (var k = 0; k < items.length; k++) {
           var key = items[k].key,
-            type = items[k].type,
-            regexpobj = key.match(/^\/(.+?)\/(.+)?/);
-          if (regexpobj !== null) {
-            try {
-              var regexp = new RegExp(regexpobj[1], regexpobj[2]);
-            } catch (e) {
-              var regexp = undefined;
-            }
+            type = items[k].type
+          if (pageChannelName && pageChannelName === key) {
+            blockPage = true;
           }
-          switch (type) {
-            case 'channel':
-              if (regexpobj !== null) {
-                if (pageChannelName && regexp && regexp.test(pageChannelName) === true) {
-                  blockPage = true;
-                }
-                if (regexp && regexp.test(channelname) === true) {
-                  block = true;
-                }
-              } else {
-                if (pageChannelName && pageChannelName === key) {
-                  blockPage = true;
-                }
-                if (channelname === key) {
-                  block = true;
-                }
-              }
-              break;
-            case 'wildcard':
-              if (regexpobj === null) {
-                if (channelname.toLowerCase().indexOf(key.toLowerCase()) > -1) {
-                  block = true;
-                }
-              }
-              break;
-            case 'keyword':
-              if (regexpobj !== null) {
-                if (pageVideoTitle && regexp && regexp.test(pageVideoTitle) === true) {
-                  blockPage = true;
-                }
-                if (regexp && regexp.test(videotitle) === true) {
-                  block = true;
-                }
-              } else {
-                if (pageVideoTitle && pageVideoTitle.toLowerCase().indexOf(key.toLowerCase()) > -1) {
-                  blockPage = true;
-                }
-                if (videotitle.toLowerCase().indexOf(key.toLowerCase()) > -1) {
-                  block = true;
-                }
-              }
-              break;
+          if (channelname === key) {
+            block = true;
           }
+
           if (blockPage === true) {
             if (/.+&list=.+/.test(window.location.href) === true) {
               document.body.querySelector('#player-api .ytp-next-button').click();
@@ -225,14 +125,14 @@ function hideVideos() {
   });
   fixThumbnails();
 }
-var contextChannelName;
+var contextChannelName, container;
 window.addEventListener('contextmenu', function(event) {
   contextChannelName = null;
+  container = null;
   for (var i = 0; i < containerList.length; i++) {
-    if (event.target.closest(containerList[i].container) !== null) {
-      contextChannelName = event.target.closest(containerList[i].container).querySelector(containerList[i].channelname).textContent.trim();
-      if (containerList[i].container === '.ytp-endscreen-content .ytp-videowall-still' && contextChannelName.indexOf('\u2022') > -1)
-        contextChannelName = contextChannelName.substr(0, contextChannelName.indexOf('\u2022')).trim();
+    if (event.target.closest(containerList[i].container) && event.target.closest(containerList[i].container).querySelector(containerList[i].channelname) !== null) {
+      container = containerList[i]
+      contextChannelName = event.target.closest(containerList[i].container).querySelector(containerList[i].channelname).textContent;
     }
     if (contextChannelName !== null)
       break;
@@ -240,6 +140,7 @@ window.addEventListener('contextmenu', function(event) {
 });
 chrome.runtime.onMessage.addListener(function(message) {
   if (message.name === 'contextMenuClicked' && contextChannelName !== null) {
+    container.containers = 0;
     addItem({ key: contextChannelName, type: 'channel' }, hideVideos);
   }
 });
