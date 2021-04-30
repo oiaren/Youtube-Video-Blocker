@@ -1,10 +1,10 @@
 var containerList = [{
     container: 'ytd-compact-video-renderer',
-    channelname: '#byline'
+    channelname: '.ytd-channel-name'
   },
   {
-    container: 'ytd-grid-video-renderer',
-    channelname: '#byline a'
+    container: 'ytd-rich-item-renderer',
+    channelname: '.ytd-channel-name a.yt-simple-endpoint'
   }
 ];
 document.addEventListener('DOMContentLoaded', function(event) {
@@ -87,6 +87,7 @@ function hideVideos() {
         continue;
       containerList[i].containers = containers.length;
       loop2: for (var j = 0; j < containers.length; j++) {
+        if (!containers[j].querySelector(containerList[i].channelname)) { continue; }
         var channelname = containers[j].querySelector(containerList[i].channelname).textContent,
           block = false,
           blockPage = false;
